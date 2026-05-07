@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "Requirement": {
+      "title": "Requirement",
+      "description": "A specific mandatory requirement extracted from a tender document.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "requirement": { "type": "string" },
+        "category": { "type": "string", "enum": ["Technical", "Financial", "Legal", "Other"] },
+        "pageNumber": { "type": "number" },
+        "keyword": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "compliant", "exception", "clarify"] },
+        "notes": { "type": "string" },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] }
+      },
+      "required": ["id", "requirement", "category", "pageNumber", "keyword", "status", "priority"]
+    },
+    "AnalysisResult": {
+      "title": "Analysis Result",
+      "description": "The full result of a document analysis.",
+      "type": "object",
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Requirement" }
+        },
+        "documentName": { "type": "string" },
+        "totalRequirements": { "type": "number" },
+        "analysisDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requirements", "documentName", "totalRequirements", "analysisDate"]
+    },
+    "HistoryItem": {
+      "title": "History Item",
+      "description": "A saved analysis session in the user's history.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "result": { "$ref": "#/entities/AnalysisResult" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "result", "timestamp", "userId"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/history/{historyId}": {
+      "schema": "HistoryItem",
+      "description": "User's scan history items."
+    }
+  }
+}

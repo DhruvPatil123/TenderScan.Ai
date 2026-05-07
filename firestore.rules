@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // History Item Validation
+    function isValidRequirement(req) {
+      return req.id is string &&
+             req.requirement is string && req.requirement.size() <= 10000 &&
+             req.category in ['Technical', 'Financial', 'Legal', 'Other'] &&
+             req.pageNumber is number &&
+             req.keyword is string &&
+             req.status in ['pending', 'compliant', 'exception', 'clarify'] &&
+             req.priority in ['High', 'Medium', 'Low'];
+    }
+
+    function isValidAnalysisResult(res) {
+      return res.requirements is list &&
+             res.requirements.size() <= 500 && // Limit number of requirements
+             res.documentName is string && res.documentName.size() <= 256 &&
+             res.totalRequirements is number &&
+             res.analysisDate is string;
+    }
+
+    function isValidHistoryItem(item) {
+      return item.id is string &&
+             item.timestamp is string &&
+             item.userId == request.auth.uid &&
+             isValidAnalysisResult(item.result);
+    }
+
+    match /users/{userId}/history/{historyId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(historyId) && isValidHistoryItem(incoming());
+      allow update: if isOwner(userId) && isValidHistoryItem(incoming()) && 
+                    incoming().userId == resource.data.userId &&
+                    incoming().id == resource.data.id;
+      allow delete: if isOwner(userId);
+    }
+  }
+}
